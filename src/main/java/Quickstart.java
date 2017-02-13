@@ -21,7 +21,9 @@ import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -33,7 +35,7 @@ public class Quickstart {
     /**
      * Application name.
      */
-    private static final String APPLICATION_NAME = "Gmail API Java Quickstart";
+    private static final String APPLICATION_NAME = "Work Journal Sender";
 
     /**
      * Directory to store user credentials for this application.
@@ -57,6 +59,10 @@ public class Quickstart {
      * Email address. {@code "me"} is a special value indicating the authenticated user.
      */
     private static final String ME = "me";
+
+    private static final String SENDER = "emailtonys@gmail.com"; // TODO use tony.robalik@gmail.com once it's ready
+    private static final String RECIPIENT = "emailtonys@gmail.com"; // TODO use chesscom-mobile-developers@googlegroups.com once sure it works
+    private static final String SUBJECT_BASE = "[CC-Report] %s Work Journal"; // %s will be replaced with date in DD/MM format
 
     /**
      * Global instance of the {@link FileDataStoreFactory}.
@@ -95,7 +101,8 @@ public class Quickstart {
         }
 
         // Send test message OR create draft
-        MimeMessage emailContent = createEmail("emailtonys@gmail.com", "emailtonys@gmail.com", "Test Subject", "Test Body");
+        // TODO pass body in by main method arg, or local filesystem? Or pass in file location by arg? Or have it infer filename by current date?
+        MimeMessage emailContent = createEmail(RECIPIENT, SENDER, subject(), "Test Body");
 //        sendMessage(service, ME, emailContent);
         createDraft(service, ME, emailContent);
     }
@@ -135,6 +142,15 @@ public class Quickstart {
         email.setText(bodyText);
 
         return email;
+    }
+
+    private static String subject() {
+        // TODO replace with Java 8 JSR 310 stuff (see: http://docs.oracle.com/javase/tutorial/datetime/iso/format.html)
+        String date = new SimpleDateFormat("MM/dd").format(new Date());
+        if (date.startsWith("0")) {
+            date = date.substring(1);
+        }
+        return String.format(SUBJECT_BASE, date);
     }
 
     /**
