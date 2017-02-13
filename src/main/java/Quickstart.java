@@ -41,19 +41,9 @@ public class Quickstart {
     private static final File DATA_STORE_DIR = new File(System.getProperty("user.home"), ".credentials/gmail-java-quickstart");
 
     /**
-     * Global instance of the {@link FileDataStoreFactory}.
-     */
-    private static FileDataStoreFactory DATA_STORE_FACTORY;
-
-    /**
      * Global instance of the JSON factory.
      */
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-
-    /**
-     * Global instance of the HTTP transport.
-     */
-    private static HttpTransport HTTP_TRANSPORT;
 
     /**
      * Global instance of the scopes required by this quickstart.
@@ -68,6 +58,16 @@ public class Quickstart {
      */
     private static final String ME = "me";
 
+    /**
+     * Global instance of the {@link FileDataStoreFactory}.
+     */
+    private static FileDataStoreFactory DATA_STORE_FACTORY;
+
+    /**
+     * Global instance of the HTTP transport.
+     */
+    private static HttpTransport HTTP_TRANSPORT;
+
     static {
         try {
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -76,42 +76,6 @@ public class Quickstart {
             t.printStackTrace();
             System.exit(1);
         }
-    }
-
-    /**
-     * Creates an authorized Credential object.
-     *
-     * @return an authorized Credential object.
-     * @throws IOException
-     */
-    public static Credential authorize() throws IOException {
-        // Load client secrets.
-        InputStream in = Quickstart.class.getResourceAsStream("/client_secret.json");
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-
-        // Build flow and trigger user authorization request.
-        GoogleAuthorizationCodeFlow flow =
-                new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                        .setDataStoreFactory(DATA_STORE_FACTORY)
-                        .setAccessType("offline")
-                        .build();
-        Credential credential = new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver())
-                .authorize("user");
-        out.println("Credentials saved to " + DATA_STORE_DIR.getAbsolutePath());
-        return credential;
-    }
-
-    /**
-     * Build and return an authorized Gmail client service.
-     *
-     * @return an authorized Gmail client service
-     * @throws IOException
-     */
-    public static Gmail getGmailService() throws IOException {
-        Credential credential = authorize();
-        return new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-                .setApplicationName(APPLICATION_NAME)
-                .build();
     }
 
     public static void main(String[] args) throws Exception {
@@ -137,6 +101,19 @@ public class Quickstart {
     }
 
     /**
+     * Build and return an authorized Gmail client service.
+     *
+     * @return an authorized Gmail client service
+     * @throws IOException
+     */
+    public static Gmail getGmailService() throws IOException {
+        Credential credential = authorize();
+        return new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+    }
+
+    /**
      * Create a MimeMessage using the parameters provided.
      *
      * @param to       email address of the receiver
@@ -158,6 +135,52 @@ public class Quickstart {
         email.setText(bodyText);
 
         return email;
+    }
+
+    /**
+     * Create draft email.
+     *
+     * @param service      an authorized Gmail API instance
+     * @param userId       user's email address. The special value "me"
+     *                     can be used to indicate the authenticated user
+     * @param emailContent the MimeMessage used as email within the draft
+     * @return the created draft
+     * @throws MessagingException
+     * @throws IOException
+     */
+    public static Draft createDraft(Gmail service, String userId, MimeMessage emailContent) throws MessagingException, IOException {
+        Message message = createMessageWithEmail(emailContent);
+        Draft draft = new Draft();
+        draft.setMessage(message);
+        draft = service.users().drafts().create(userId, draft)
+                .execute();
+
+        out.println("Draft id: " + draft.getId());
+        out.println(draft.toPrettyString());
+        return draft;
+    }
+
+    /**
+     * Creates an authorized Credential object.
+     *
+     * @return an authorized Credential object.
+     * @throws IOException
+     */
+    public static Credential authorize() throws IOException {
+        // Load client secrets.
+        InputStream in = Quickstart.class.getResourceAsStream("/client_secret.json");
+        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+
+        // Build flow and trigger user authorization request.
+        GoogleAuthorizationCodeFlow flow =
+                new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+                        .setDataStoreFactory(DATA_STORE_FACTORY)
+                        .setAccessType("offline")
+                        .build();
+        Credential credential = new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver())
+                .authorize("user");
+        out.println("Credentials saved to " + DATA_STORE_DIR.getAbsolutePath());
+        return credential;
     }
 
     /**
@@ -198,29 +221,6 @@ public class Quickstart {
         out.println("Message id: " + message.getId());
         out.println(message.toPrettyString());
         return message;
-    }
-
-    /**
-     * Create draft email.
-     *
-     * @param service      an authorized Gmail API instance
-     * @param userId       user's email address. The special value "me"
-     *                     can be used to indicate the authenticated user
-     * @param emailContent the MimeMessage used as email within the draft
-     * @return the created draft
-     * @throws MessagingException
-     * @throws IOException
-     */
-    public static Draft createDraft(Gmail service, String userId, MimeMessage emailContent) throws MessagingException, IOException {
-        Message message = createMessageWithEmail(emailContent);
-        Draft draft = new Draft();
-        draft.setMessage(message);
-        draft = service.users().drafts().create(userId, draft)
-                .execute();
-
-        out.println("Draft id: " + draft.getId());
-        out.println(draft.toPrettyString());
-        return draft;
     }
 
 }
