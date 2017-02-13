@@ -6,7 +6,6 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
-//    jcenter()
     mavenCentral()
 }
 
@@ -14,11 +13,15 @@ dependencies {
     compile 'com.google.api-client:google-api-client:1.22.0'
     compile 'com.google.oauth-client:google-oauth-client-jetty:1.22.0'
     compile 'com.google.apis:google-api-services-gmail:v1-rev59-1.22.0'
-
     compile 'javax.mail:mail:1.4.1'
 
-    // The production code uses the SLF4J logging API at compile time
-//    compile 'org.slf4j:slf4j-api:1.7.21'
-
     testCompile 'junit:junit:4.12'
+}
+
+jar {
+    manifest {
+        attributes 'Manifest-version': '1.0',
+                'Class-Path': configurations.compile.join(' '),
+                'Main-Class': "$mainClassName"
+    }
 }

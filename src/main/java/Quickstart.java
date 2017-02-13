@@ -145,6 +145,7 @@ public class Quickstart {
     public static MimeMessage createEmail(String to, String from, String subject, File body) throws MessagingException, IOException {
         String bodyText = Files.readAllLines(body.toPath())
                 .stream()
+                //.filter(line -> !line.startsWith("===="))
                 .collect(Collectors.joining("\n"));
 
         return createEmail(to, from, subject, bodyText);
