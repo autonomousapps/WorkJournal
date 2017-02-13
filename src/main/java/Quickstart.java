@@ -12,8 +12,6 @@ import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.Draft;
-import com.google.api.services.gmail.model.Label;
-import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.Message;
 
 import javax.mail.MessagingException;
@@ -21,11 +19,13 @@ import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.*;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static java.lang.System.out;
 import static javax.mail.Message.RecipientType;
@@ -60,8 +60,8 @@ public class Quickstart {
      */
     private static final String ME = "me";
 
-    private static final String SENDER = "emailtonys@gmail.com"; // TODO use tony.robalik@gmail.com once it's ready
-    private static final String RECIPIENT = "emailtonys@gmail.com"; // TODO use chesscom-mobile-developers@googlegroups.com once sure it works
+    private static final String SENDER = "tony.robalik@gmail.com";
+    private static final String RECIPIENT = "chesscom-mobile-developers@googlegroups.com";
     private static final String SUBJECT_BASE = "[CC-Report] %s Work Journal"; // %s will be replaced with date in DD/MM format
 
     /**
@@ -89,22 +89,34 @@ public class Quickstart {
         Gmail service = getGmailService();
 
         // Print the labels in the user's account.
-        ListLabelsResponse listResponse = service.users().labels().list(ME).execute();
-        List<Label> labels = listResponse.getLabels();
-        if (labels.size() == 0) {
-            out.println("No labels found.");
-        } else {
-            out.println("Labels:");
-            labels.stream()
-                    .sorted((l1, l2) -> l1.getName().compareTo(l2.getName()))
-                    .forEach(label -> out.printf("- %s\n", label.getName()));
-        }
+//        ListLabelsResponse listResponse = service.users().labels().list(ME).execute();
+//        List<Label> labels = listResponse.getLabels();
+//        if (labels.size() == 0) {
+//            out.println("No labels found.");
+//        } else {
+//            out.println("Labels:");
+//            labels.stream()
+//                    .sorted((l1, l2) -> l1.getName().compareTo(l2.getName()))
+//                    .forEach(label -> out.printf("- %s\n", label.getName()));
+//        }
 
         // Send test message OR create draft
-        // TODO pass body in by main method arg, or local filesystem? Or pass in file location by arg? Or have it infer filename by current date?
-        MimeMessage emailContent = createEmail(RECIPIENT, SENDER, subject(), "Test Body");
+        File workJournal = workJournalFile();
+        out.println("Work Journal file=" + workJournal.toString());
+        if (workJournal.exists()) {
+            MimeMessage emailContent = createEmail(RECIPIENT, SENDER, subject(), workJournal);
 //        sendMessage(service, ME, emailContent);
-        createDraft(service, ME, emailContent);
+            createDraft(service, ME, emailContent);
+        }
+    }
+
+    private static File workJournalFile() {
+        String filename = "work_journal_";
+        String date = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+        filename = filename + date + ".txt";
+
+        File home = new File(System.getProperty("user.home"), "workspace/chess/work_journal");
+        return new File(home, filename);
     }
 
     /**
@@ -118,6 +130,24 @@ public class Quickstart {
         return new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
                 .build();
+    }
+
+    /**
+     * Create a MimeMessage using the parameters provided.
+     *
+     * @param to      email address of the receiver
+     * @param from    email address of the sender, the mailbox account
+     * @param subject subject of the email
+     * @param body    file with body text of the email
+     * @return the MimeMessage to be used to send email
+     * @throws MessagingException
+     */
+    public static MimeMessage createEmail(String to, String from, String subject, File body) throws MessagingException, IOException {
+        String bodyText = Files.readAllLines(body.toPath())
+                .stream()
+                .collect(Collectors.joining("\n"));
+
+        return createEmail(to, from, subject, bodyText);
     }
 
     /**
