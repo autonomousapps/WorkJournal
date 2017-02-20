@@ -15,9 +15,12 @@ import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Message;
 
 import javax.mail.MessagingException;
+import javax.mail.Multipart;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 import java.io.*;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
@@ -25,6 +28,9 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.lang.System.out;
@@ -63,6 +69,11 @@ public class Quickstart {
     private static final String SENDER = "tony.robalik@gmail.com";
     private static final String RECIPIENT = "chesscom-mobile-developers@googlegroups.com";
     private static final String SUBJECT_BASE = "[CC-Report] %s Work Journal"; // %s will be replaced with date in DD/MM format
+
+    /**
+     * For use when constructing email from work journal file.
+     */
+    private static final AtomicBoolean FILTER = new AtomicBoolean(true);
 
     /**
      * Global instance of the {@link FileDataStoreFactory}.
@@ -145,10 +156,28 @@ public class Quickstart {
     public static MimeMessage createEmail(String to, String from, String subject, File body) throws MessagingException, IOException {
         String bodyText = Files.readAllLines(body.toPath())
                 .stream()
-                //.filter(line -> !line.startsWith("===="))
+                .map(line -> {
+                    if (line.startsWith("===")) {
+                        // filter everything after '==='
+                        FILTER.set(false);
+                    }
+                    return line;
+                })
+                .filter(ignored -> FILTER.get())
                 .collect(Collectors.joining("\n"));
 
+        bodyText = embolden(messageDate()) + "\n\n" + bodyText;
+
         return createEmail(to, from, subject, bodyText);
+    }
+
+    private static String messageDate() {
+        // TODO replace with Java 8 JSR 310 stuff (see: http://docs.oracle.com/javase/tutorial/datetime/iso/format.html)
+        return new SimpleDateFormat("E, M/dd/yyyy").format(new Date());
+    }
+
+    private static String embolden(String text) {
+        return "*" + text + "*";
     }
 
     /**
@@ -162,7 +191,6 @@ public class Quickstart {
      * @throws MessagingException
      */
     public static MimeMessage createEmail(String to, String from, String subject, String bodyText) throws MessagingException {
-
         Properties props = new Properties();
         Session session = Session.getDefaultInstance(props, null);
 
@@ -170,9 +198,48 @@ public class Quickstart {
         email.setFrom(new InternetAddress(from));
         email.addRecipient(RecipientType.TO, new InternetAddress(to));
         email.setSubject(subject);
-        email.setText(bodyText);
+//        email.setText(bodyText);
+
+        // HTML content
+        Multipart multipart = new MimeMultipart("alternative");
+        MimeBodyPart textPart = new MimeBodyPart();
+        textPart.setText(bodyText, "utf-8");
+        MimeBodyPart htmlPart = new MimeBodyPart();
+        htmlPart.setContent(htmlFromText(bodyText), "text/html; charset=utf-8");
+        multipart.addBodyPart(textPart);
+        multipart.addBodyPart(htmlPart);
+        email.setContent(multipart);
 
         return email;
+    }
+
+    private static String htmlFromText(String text) {
+        text = htmlStrong(text);
+        text = htmlUnderline(text);
+
+        return "<html>" + text.replaceAll("\n", "<br />") + "</html>";
+    }
+
+    private static String htmlStrong(String text) {
+        Pattern p = Pattern.compile("\\*[^*]+\\*");
+        Matcher m = p.matcher(text);
+
+        while (m.find()) {
+            String group = m.group();
+            text = text.replace(group, "<strong>" + group.replaceAll("\\*", "") + "</strong>");
+        }
+        return text;
+    }
+
+    private static String htmlUnderline(String text) {
+        Pattern p = Pattern.compile("_[^_]+_");
+        Matcher m = p.matcher(text);
+
+        while (m.find()) {
+            String group = m.group();
+            text = text.replace(group, "<u>" + group.replaceAll("_", "") + "</u>");
+        }
+        return text;
     }
 
     private static String subject() {
