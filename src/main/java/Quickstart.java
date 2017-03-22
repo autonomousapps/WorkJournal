@@ -173,7 +173,7 @@ public class Quickstart {
 
     private static String messageDate() {
         // TODO replace with Java 8 JSR 310 stuff (see: http://docs.oracle.com/javase/tutorial/datetime/iso/format.html)
-        return new SimpleDateFormat("E, M/dd/yyyy").format(new Date());
+        return new SimpleDateFormat("E, M/d/yyyy").format(new Date());
     }
 
     private static String embolden(String text) {
@@ -216,6 +216,7 @@ public class Quickstart {
     private static String htmlFromText(String text) {
         text = htmlStrong(text);
         text = htmlUnderline(text);
+//        text = htmlStrikethrough(text);
 
         return "<html>" + text.replaceAll("\n", "<br />") + "</html>";
     }
@@ -242,12 +243,24 @@ public class Quickstart {
         return text;
     }
 
+    // TODO this will not work with dashes
+    private static String htmlStrikethrough(String text) {
+        Pattern p = Pattern.compile("-[^-]+-");
+        Matcher m = p.matcher(text);
+
+        while (m.find()) {
+            String group = m.group();
+            text = text.replace(group, "<strike>" + group.replaceAll("-", "") + "</strike>");
+        }
+        return text;
+    }
+
     private static String subject() {
         // TODO replace with Java 8 JSR 310 stuff (see: http://docs.oracle.com/javase/tutorial/datetime/iso/format.html)
-        String date = new SimpleDateFormat("MM/dd").format(new Date());
-        if (date.startsWith("0")) {
-            date = date.substring(1);
-        }
+        String date = new SimpleDateFormat("M/d").format(new Date());
+//        if (date.startsWith("0")) {
+//            date = date.substring(1);
+//        }
         return String.format(SUBJECT_BASE, date);
     }
 
