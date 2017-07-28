@@ -24,10 +24,7 @@ import javax.mail.internet.MimeMultipart;
 import java.io.*;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -177,7 +174,7 @@ public class Quickstart {
     }
 
     private static String embolden(String text) {
-        return "*" + text + "*";
+        return "<strong>" + text + "</strong>";
     }
 
     /**
@@ -216,13 +213,17 @@ public class Quickstart {
     private static String htmlFromText(String text) {
         text = htmlStrong(text);
         text = htmlUnderline(text);
-//        text = htmlStrikethrough(text);
+        text = htmlJiraLinks(text);
+        text = htmlPrLinks(text);
+        text = htmlStrikethrough(text);
 
         return "<html>" + text.replaceAll("\n", "<br />") + "</html>";
     }
 
+    private static final String WHITESPACE = "\\s+";
+
     private static String htmlStrong(String text) {
-        Pattern p = Pattern.compile("\\*[^*]+\\*");
+        Pattern p = Pattern.compile(WHITESPACE + "\\*[^*]+\\*"); // *This is bold* (must start with whitespace character)
         Matcher m = p.matcher(text);
 
         while (m.find()) {
@@ -233,7 +234,7 @@ public class Quickstart {
     }
 
     private static String htmlUnderline(String text) {
-        Pattern p = Pattern.compile("_[^_]+_");
+        Pattern p = Pattern.compile(WHITESPACE + "_[^_]+_"); // _This is underlined_
         Matcher m = p.matcher(text);
 
         while (m.find()) {
@@ -243,9 +244,41 @@ public class Quickstart {
         return text;
     }
 
-    // TODO this will not work with dashes
+    private static String htmlJiraLinks(String text) {
+        Pattern p = Pattern.compile("AN-\\d+"); // AN-123
+        Matcher m = p.matcher(text);
+
+        while (m.find()) {
+            String group = m.group();
+            text = text.replace(group, jiraLink(group));
+        }
+        return text;
+    }
+
+    private static String jiraLink(String ticket) {
+        // e.g., https://chesscom.atlassian.net/browse/AN-1176
+        return String.format(Locale.US, "<a href=\"https://chesscom.atlassian.net/browse/%s\">%s</a>", ticket, ticket);
+    }
+
+    private static String htmlPrLinks(String text) {
+        Pattern p = Pattern.compile("PR ?#\\d+"); // `PR #123` or `PR#123`
+        Matcher m = p.matcher(text);
+
+        while (m.find()) {
+            String group = m.group();
+            text = text.replace(group, githubLinks(group));
+        }
+        return text;
+    }
+
+    private static String githubLinks(String pr) {
+        String prNum = pr.substring(pr.indexOf("#") + 1); // if pr = PR #123, then -> 123
+        // https://github.com/ChessCom/android/pull/814
+        return String.format(Locale.US, "<a href=\"https://github.com/ChessCom/android/pull/%s\">%s</a>", prNum, pr);
+    }
+
     private static String htmlStrikethrough(String text) {
-        Pattern p = Pattern.compile("-[^-]+-");
+        Pattern p = Pattern.compile(WHITESPACE + "-[^-]+-");
         Matcher m = p.matcher(text);
 
         while (m.find()) {
