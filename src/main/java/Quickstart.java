@@ -245,7 +245,7 @@ public class Quickstart {
     }
 
     private static String htmlJiraLinks(String text) {
-        Pattern p = Pattern.compile("AN-\\d+"); // AN-123
+        Pattern p = Pattern.compile(WHITESPACE + "(AN|ACK|CV)-\\d+"); // AN-123, ACK-123, CV-12345
         Matcher m = p.matcher(text);
 
         while (m.find()) {
