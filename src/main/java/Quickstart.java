@@ -153,12 +153,11 @@ public class Quickstart {
     public static MimeMessage createEmail(String to, String from, String subject, File body) throws MessagingException, IOException {
         String bodyText = Files.readAllLines(body.toPath())
                 .stream()
-                .map(line -> {
+                .peek(line -> {
                     if (line.startsWith("===")) {
                         // filter everything after '==='
                         FILTER.set(false);
                     }
-                    return line;
                 })
                 .filter(ignored -> FILTER.get())
                 .collect(Collectors.joining("\n"));
@@ -245,14 +244,19 @@ public class Quickstart {
     }
 
     private static String htmlJiraLinks(String text) {
-        Pattern p = Pattern.compile(WHITESPACE + "(AN|ACK|CV)-\\d+"); // AN-123, ACK-123, CV-12345
-        Matcher m = p.matcher(text);
+        Pattern p = Pattern.compile("(AN|ACK|CV)-\\d+"); // AN-123, ACK-123, CV-12345
 
-        while (m.find()) {
-            String group = m.group();
-            text = text.replace(group, jiraLink(group));
-        }
-        return text;
+        // TODO this will still break if there is more than one identical match on the same line.
+        return Arrays.stream(text.split("\n"))
+                .map(line -> {
+                    Matcher m = p.matcher(line);
+                    while (m.find()) {
+                        String group = m.group();
+                        line = line.replace(group, jiraLink(group));
+                    }
+                    return line;
+                })
+                .collect(Collectors.joining("\n"));
     }
 
     private static String jiraLink(String ticket) {
